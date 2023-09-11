@@ -1,3 +1,4 @@
+import sys
 import pygame
 import torch
 import numpy as np
@@ -19,9 +20,9 @@ grid = np.array([
     [P1, EMPTY, P1, EMPTY, P1, EMPTY, P1, EMPTY],
     [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY],
     [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY],
-    [EMPTY, P1K, EMPTY, P2, EMPTY, P2, EMPTY, P2],
+    [EMPTY, P1, EMPTY, P2, EMPTY, P2, EMPTY, P2],
     [P2, EMPTY, P2, EMPTY, P2, EMPTY, P2, EMPTY],
-    [EMPTY, P1K, EMPTY, P2, EMPTY, P2, EMPTY, P2]
+    [EMPTY, P1, EMPTY, P2, EMPTY, P2, EMPTY, P2]
 ])
 
 grid_colors = np.array([
@@ -44,14 +45,15 @@ pygame.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 clock = pygame.time.Clock()
 crown_img = pygame.transform.scale(pygame.image.load("./static/crown.png"), (CELL_WIDTH / 2, CELL_HEIGHT / 2))
-RUNNING = True
+USER_TURN = True 
 
-while RUNNING:
 
+def user_turn ():
+    global USER_TURN, grid, grid_colors, moving_draught, moving_draught_pos
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            RUNNING = False 
-            break
+            pygame.quit()
+            sys.exit()
 
         elif event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:
@@ -68,6 +70,8 @@ while RUNNING:
                 if draughts.verify_move(grid, grid_colors, moving_draught, cell):
                     grid[cell] = grid[moving_draught]
                     grid[moving_draught] = EMPTY
+                    USER_TURN = False 
+                    print("User move")
                 moving_draught = None
                 moving_draught_pos = None 
 
@@ -75,8 +79,12 @@ while RUNNING:
             if moving_draught is not None:
                 mouse_x, mouse_y = event.pos
                 moving_draught_pos = (mouse_x, mouse_y)
-                
 
+
+def draw ():
+    global USER_TURN, grid, grid_colors, pygame, screen, clock, moving_draught, moving_draught_pos
+    grid[0, :] = np.where(grid[0, :] == P2, P2K, grid[0, :])
+    grid[7, :] = np.where(grid[7, :] == P1, P1K, grid[7, :])
     screen.fill(BLACK)
     for i, j in itertools.product(range(8), repeat=2):
         if np.array_equal(grid_colors[i, j], WHITE):
@@ -103,11 +111,15 @@ while RUNNING:
     pygame.display.flip()
     clock.tick(FPS)
 
-    # Promote to king daught
-    grid[0, :] = np.where(grid[0, :] == P2, P2K, grid[0, :])
-    grid[7, :] = np.where(grid[7, :] == P1, P1K, grid[7, :])
 
 
+while True:
+    # User turn
+    USER_TURN = True
+    while USER_TURN:
+        user_turn()
+        draw()
+    # AI turn
     #draughts.ai_step()
-
-pygame.quit()
+    print("AI move")
+    draw()
