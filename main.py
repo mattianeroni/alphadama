@@ -46,6 +46,7 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 clock = pygame.time.Clock()
 crown_img = pygame.transform.scale(pygame.image.load("./static/crown.png"), (CELL_WIDTH / 2, CELL_HEIGHT / 2))
 USER_TURN = True 
+TRAIN = True is sys.argv[1] == "--train" else False
 
 
 def user_turn ():
