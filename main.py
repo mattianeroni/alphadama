@@ -1,3 +1,4 @@
+import os 
 import sys
 import pygame
 import torch
@@ -6,8 +7,9 @@ import itertools
 
 from utils import BLACK, WHITE, GREY1, GREY2, RED, GREEN, BLUE
 from utils import EMPTY, E, P1, P2, P1K, P2K
+from model import load_model, save_model, DamaModel, encode, decode
+from agent import DamaAgent
 import draughts
-import model
 
 
 WIDTH, HEIGHT = 500, 500
@@ -24,7 +26,6 @@ grid = np.array([
     [P2, EMPTY, P2, EMPTY, P2, EMPTY, P2, EMPTY],
     [EMPTY, P1, EMPTY, P2, EMPTY, P2, EMPTY, P2]
 ])
-
 grid_colors = np.array([
     [BLACK, WHITE] * 4,
     [WHITE, BLACK] * 4,
@@ -35,18 +36,45 @@ grid_colors = np.array([
     [BLACK, WHITE] * 4,
     [WHITE, BLACK] * 4,
 ])
-
-model.decode(grid, np.random.rand(4, 8, 8))
-
 moving_draught = None
 moving_draught_pos = None
+USER_TURN = True
 
+#x = np.expand_dims(grid, axis=0) #np.stack((grid, grid, grid), axis=0)
+#print(x.shape)
+#print(encode(x).shape)
+
+
+# Init game and game instances
 pygame.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 clock = pygame.time.Clock()
-crown_img = pygame.transform.scale(pygame.image.load("./static/crown.png"), (CELL_WIDTH / 2, CELL_HEIGHT / 2))
-USER_TURN = True 
-TRAIN = True is sys.argv[1] == "--train" else False
+
+# Images for graphics
+crown_img = pygame.transform.scale(pygame.image.load("./static/crown.png"), (CELL_WIDTH / 2, CELL_HEIGHT / 2)) 
+
+# Flag to train the model while playing
+TRAIN = True if len(sys.argv) > 1 and sys.argv[1] == "--train" else False
+
+# Load the model 
+model = load_model("./model/model.pth") if os.path.exists("./model") else DamaModel()
+agent = DamaAgent(model, randomness=0.0)
+
+def reset ():
+    global user_turn, grid, moving_draught, moving_draught_pos
+    grid = np.array([
+        [P1, EMPTY, P1, EMPTY, P1, EMPTY, P1, EMPTY],
+        [EMPTY, P1, EMPTY, P1, EMPTY, P1, EMPTY, P1],
+        [P1, EMPTY, P1, EMPTY, P1, EMPTY, P1, EMPTY],
+        [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY],
+        [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY],
+        [EMPTY, P1, EMPTY, P2, EMPTY, P2, EMPTY, P2],
+        [P2, EMPTY, P2, EMPTY, P2, EMPTY, P2, EMPTY],
+        [EMPTY, P1, EMPTY, P2, EMPTY, P2, EMPTY, P2]
+    ])
+    moving_draught = None
+    moving_draught_pos = None
+    USER_TURN = True
 
 
 def user_turn ():
@@ -72,7 +100,7 @@ def user_turn ():
                     grid[cell] = grid[moving_draught]
                     grid[moving_draught] = EMPTY
                     USER_TURN = False 
-                    print("User move")
+                    #print("User move")
                 moving_draught = None
                 moving_draught_pos = None 
 
@@ -113,14 +141,16 @@ def draw ():
     clock.tick(FPS)
 
 
-
-while True:
-    # User turn
-    USER_TURN = True
-    while USER_TURN:
-        user_turn()
-        draw()
-    # AI turn
-    #draughts.ai_step()
-    print("AI move")
-    draw()
+if __name__ == "__main__":
+    while True:
+        # User turn
+        USER_TURN = True
+        #while USER_TURN:
+        #    user_turn()
+        #    draw()
+        # AI turn
+        y = agent.move(np.stack((grid, grid, grid, grid), axis=0))
+        #y = agent.move(np.expand_dims(grid, axis=0))
+        break
+        #print("AI move")
+        #draw()
