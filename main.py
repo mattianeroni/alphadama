@@ -40,11 +40,6 @@ moving_draught = None
 moving_draught_pos = None
 USER_TURN = True
 
-#x = np.expand_dims(grid, axis=0) #np.stack((grid, grid, grid), axis=0)
-#print(x.shape)
-#print(encode(x).shape)
-
-
 # Init game and game instances
 pygame.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -100,7 +95,7 @@ def user_turn ():
                     grid[cell] = grid[moving_draught]
                     grid[moving_draught] = EMPTY
                     USER_TURN = False 
-                    #print("User move")
+                
                 moving_draught = None
                 moving_draught_pos = None 
 
@@ -145,12 +140,12 @@ if __name__ == "__main__":
     while True:
         # User turn
         USER_TURN = True
-        #while USER_TURN:
-        #    user_turn()
-        #    draw()
+        while USER_TURN:
+            user_turn()
+            draw()
         # AI turn
-        y = agent.move(np.stack((grid, grid, grid, grid), axis=0))
-        #y = agent.move(np.expand_dims(grid, axis=0))
-        break
+        y = agent.move(grid.reshape(1, 8, 8)) #np.stack((grid, grid, grid, grid), axis=0))
+        print(y)
+        
         #print("AI move")
         #draw()

@@ -29,9 +29,6 @@ class DamaAgent:
             return decode(grid, random_output)
         in_tensor = encode(grid)
         out_tensor = self.model.__call__(in_tensor)
-        print("grid shape: ", grid.shape)
-        print("in tensor shape: ", in_tensor.shape)
-        print("out tensor shape: ", out_tensor.shape)
         return decode(grid, out_tensor)
 
     def train (self, grid, action, reward, next_grid, done):
