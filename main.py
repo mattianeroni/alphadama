@@ -7,6 +7,7 @@ import itertools
 
 from utils import BLACK, WHITE, GREY1, GREY2, RED, GREEN, BLUE
 from utils import EMPTY, E, P1, P2, P1K, P2K
+from utils import manhattan_distance, euclidean_distance
 from model import load_model, save_model, DamaModel, encode, decode
 from agent import DamaAgent
 import draughts
@@ -71,6 +72,20 @@ def reset ():
     moving_draught_pos = None
     USER_TURN = True
 
+def move (old_pos, new_pos, verify=False):
+    """ 
+    Method to manage a movement and all the involved stuff. 
+    The movement carried out is already supposed to be verified.
+    """
+    global grid, grid_colors
+    if verify and not draughts.verify_move(grid, grid_colors, old_pos, new_pos):
+        raise Exception(f"Unpossible movement from {old_pos} to {new_pos} selected by the model")
+    grid[new_pos] = grid[old_pos]
+    grid[old_pos] = EMPTY
+    if manhattan_distance(old_pos, new_pos) == 4:
+        mid_pos = (old_pos[0] + (new_pos[0] - old_pos[0]) // 2, old_pos[1] + (new_pos[1] - old_pos[1]) // 2)
+        grid[mid_pos] = EMPTY
+
 
 def user_turn ():
     global USER_TURN, grid, grid_colors, moving_draught, moving_draught_pos
@@ -92,8 +107,7 @@ def user_turn ():
                 mouse_x, mouse_y = event.pos
                 cell = (int(mouse_y / CELL_HEIGHT), int(mouse_x / CELL_WIDTH))
                 if draughts.verify_move(grid, grid_colors, moving_draught, cell):
-                    grid[cell] = grid[moving_draught]
-                    grid[moving_draught] = EMPTY
+                    move(old_pos=moving_draught, new_pos=cell)
                     USER_TURN = False 
                 
                 moving_draught = None
@@ -144,8 +158,8 @@ if __name__ == "__main__":
             user_turn()
             draw()
         # AI turn
-        y = agent.move(grid.reshape(1, 8, 8)) #np.stack((grid, grid, grid, grid), axis=0))
-        print(y)
-        
+        action = agent.move(grid.reshape(1, 8, 8))[-1]
+        old_pos, new_pos = draughts.translate_ai_move(grid, grid_colors, action, verify=True)
+        move(old_pos, new_pos)
         #print("AI move")
         #draw()
