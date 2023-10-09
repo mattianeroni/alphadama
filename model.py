@@ -130,6 +130,9 @@ def decode (grid, output):
         grid = torch.from_numpy(grid)
     feas = feasible_moves(grid).type(torch.float)
     feasible_scores = output * feas
+    print("feas: ", feas)
+    print("out: ", output)
+    print("scores: ", feasible_scores)
     indexes = np.unravel_index(feasible_scores.flatten(-3).argmax(dim=1), (4, 8, 8))
     return tuple(zip(*indexes))
 

@@ -70,7 +70,7 @@ def translate_ai_move (grid, grid_colors, move, verify=True):
           2: (old_pos[0] - 2, old_pos[1] - 2), 3: (old_pos[0] - 2, old_pos[1] + 2)}
     new_pos = sm[direction] if grid[sm[direction]] == EMPTY else dm[direction]
     if verify and not verify_move(grid, grid_colors, old_pos, new_pos):
-        raise Exception(f"Unpossible movement from {old_pos} to {new_pos} selected by the model")
+        raise Exception(f"Unpossible movement from {old_pos} to {new_pos} selected by the model. Arised from move {move}")
     return old_pos, new_pos
 
 

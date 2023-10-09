@@ -23,9 +23,9 @@ grid = np.array([
     [P1, EMPTY, P1, EMPTY, P1, EMPTY, P1, EMPTY],
     [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY],
     [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY],
-    [EMPTY, P1, EMPTY, P2, EMPTY, P2, EMPTY, P2],
+    [EMPTY, P2, EMPTY, P2, EMPTY, P2, EMPTY, P2],
     [P2, EMPTY, P2, EMPTY, P2, EMPTY, P2, EMPTY],
-    [EMPTY, P1, EMPTY, P2, EMPTY, P2, EMPTY, P2]
+    [EMPTY, P2, EMPTY, P2, EMPTY, P2, EMPTY, P2]
 ])
 grid_colors = np.array([
     [BLACK, WHITE] * 4,
@@ -64,9 +64,9 @@ def reset ():
         [P1, EMPTY, P1, EMPTY, P1, EMPTY, P1, EMPTY],
         [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY],
         [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY],
-        [EMPTY, P1, EMPTY, P2, EMPTY, P2, EMPTY, P2],
+        [EMPTY, P2, EMPTY, P2, EMPTY, P2, EMPTY, P2],
         [P2, EMPTY, P2, EMPTY, P2, EMPTY, P2, EMPTY],
-        [EMPTY, P1, EMPTY, P2, EMPTY, P2, EMPTY, P2]
+        [EMPTY, P2, EMPTY, P2, EMPTY, P2, EMPTY, P2]
     ])
     moving_draught = None
     moving_draught_pos = None
@@ -85,6 +85,11 @@ def move (old_pos, new_pos, verify=False):
     if manhattan_distance(old_pos, new_pos) == 4:
         mid_pos = (old_pos[0] + (new_pos[0] - old_pos[0]) // 2, old_pos[1] + (new_pos[1] - old_pos[1]) // 2)
         grid[mid_pos] = EMPTY
+    # verify if the game is concluded 
+    if (grid[grid == P1].size == 0 and grid[grid == P1K].size == 0) or \
+       (grid[grid == P2].size == 0 and grid[grid == P2K].size == 0):
+        pygame.quit()
+        sys.exit()
 
 
 def user_turn ():
@@ -119,6 +124,13 @@ def user_turn ():
                 moving_draught_pos = (mouse_x, mouse_y)
 
 
+def ai_turn ():
+    global grid, grid_colors, agent, TRAIN
+    action = agent.move(grid.reshape(1, 8, 8))[-1]
+    old_pos, new_pos = draughts.translate_ai_move(grid, grid_colors, action, verify=True)
+    move(old_pos, new_pos)
+
+
 def draw ():
     global USER_TURN, grid, grid_colors, pygame, screen, clock, moving_draught, moving_draught_pos
     grid[0, :] = np.where(grid[0, :] == P2, P2K, grid[0, :])
@@ -150,6 +162,7 @@ def draw ():
     clock.tick(FPS)
 
 
+
 if __name__ == "__main__":
     while True:
         # User turn
@@ -158,8 +171,5 @@ if __name__ == "__main__":
             user_turn()
             draw()
         # AI turn
-        action = agent.move(grid.reshape(1, 8, 8))[-1]
-        old_pos, new_pos = draughts.translate_ai_move(grid, grid_colors, action, verify=True)
-        move(old_pos, new_pos)
-        #print("AI move")
-        #draw()
+        ai_turn()
+        draw()
