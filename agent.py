@@ -28,10 +28,10 @@ class DamaAgent:
         """ Method to make an AI movement """
         if random.random() < self.randomness:
             random_output = torch.rand((grid.shape[0], 4, 8, 8))
-            return decode(grid, random_output)
+            return decode(grid, random_output, tuple_form=True)
         in_tensor = encode(grid)
         out_tensor = self.model.__call__(in_tensor)
-        return decode(grid, out_tensor)
+        return decode(grid, out_tensor, tuple_form=True)
 
     def train (self, state, action, reward, next_state, done):
         """ Short training step """
@@ -60,7 +60,3 @@ class DamaAgent:
         loss = self.criterion(target, pred)
         loss.backward()
         self.optimizer.step()
-
-    def long_train (self):
-        """ Long training step """
-        pass

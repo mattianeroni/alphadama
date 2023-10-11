@@ -103,12 +103,14 @@ def feasible_moves (grid):
 
 
 @torch.no_grad()
-def decode (grid, output):
+def decode (grid, output, tuple_form=False):
     """ 
     Decode the output of the neural network into a decision.
     :param grid: (B, 8, 8)
-    :param output: B tuples like (i, x1, x2) representing the suggestion
-                   to move draught in position (x1, x2) in direction i. 
+    :param output: A tuple of 3 array of length B, representing respectively (i, x1, x2),
+                   where B is the batch, i is the direction, and (x1, x2) the position
+                   of the draught to be moved.
+            
 
     Initially we encode the output as a single matrix 4x8x8 where 
     element (i, x, y) represent the movement of daught in position
@@ -130,11 +132,24 @@ def decode (grid, output):
         grid = torch.from_numpy(grid)
     feas = feasible_moves(grid).type(torch.float)
     feasible_scores = output * feas
-    print("feas: ", feas)
-    print("out: ", output)
-    print("scores: ", feasible_scores)
     indexes = np.unravel_index(feasible_scores.flatten(-3).argmax(dim=1), (4, 8, 8))
+    #if tuple_form: return tuple(zip(*indexes))
+    return indexes
+
+
+@torch.no_grad()
+def action_tensors_to_tuples (actions):
+    """ Convert the actions in the form retuned by decode, into a set of 
+    tuples """
     return tuple(zip(*indexes))
+
+
+@torch.no_grad()
+def action_tuples_to_tensors (actions):
+    """ Convert actions expressed as a set of tuples into the 
+    form returned by decode """
+    m = torch.tensor(actions)
+    return (m[:,0], m[:,1], m[:, 2])
 
 
 def save_model (model):

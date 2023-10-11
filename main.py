@@ -126,7 +126,8 @@ def user_turn ():
 
 def ai_turn ():
     global grid, grid_colors, agent, TRAIN
-    action = agent.move(grid.reshape(1, 8, 8))[-1]
+    action_tensors = agent.move(grid.reshape(1, 8, 8))
+    action = tuple(zip(*action_tensors))[-1]
     old_pos, new_pos = draughts.translate_ai_move(grid, grid_colors, action, verify=True)
     move(old_pos, new_pos)
 
