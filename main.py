@@ -7,8 +7,9 @@ import itertools
 
 from utils import BLACK, WHITE, GREY1, GREY2, RED, GREEN, BLUE
 from utils import EMPTY, E, P1, P2, P1K, P2K
+from utils import LOSE, WIN, P1_LOSS, P2_EAT, P1K_LOSS, P2K_EAT
 from utils import manhattan_distance, euclidean_distance
-from model import load_model, save_model, DamaModel, encode, decode
+from model import load_model, save_model, DamaModel, encode, decode, action_tensors_to_tuples
 from agent import DamaAgent
 import draughts
 
@@ -56,6 +57,7 @@ TRAIN = True if len(sys.argv) > 1 and sys.argv[1] == "--train" else False
 model = load_model("./model/model.pth") if os.path.exists("./model") else DamaModel()
 agent = DamaAgent(model, randomness=0.0)
 
+
 def reset ():
     global user_turn, grid, moving_draught, moving_draught_pos
     grid = np.array([
@@ -72,28 +74,40 @@ def reset ():
     moving_draught_pos = None
     USER_TURN = True
 
-def move (old_pos, new_pos, verify=False):
+
+def move (old_pos, new_pos):
     """ 
     Method to manage a movement and all the involved stuff. 
     The movement carried out is already supposed to be verified.
+    :param old_pos: The previous position
+    :param new_pos: The new position 
+    :return <reward, done>: The obtained reward and done = True if the game is concluded.
     """
     global grid, grid_colors
-    if verify and not draughts.verify_move(grid, grid_colors, old_pos, new_pos):
-        raise Exception(f"Unpossible movement from {old_pos} to {new_pos} selected by the model")
+    scores = {P1 : P1_LOSS, P2 : P2_EAT, P1K : P1K_LOSS, P2K : P2K_EAT}
+    score, done = 0, False
+    # normal move
     grid[new_pos] = grid[old_pos]
     grid[old_pos] = EMPTY
+    # a draught has been eaten
     if manhattan_distance(old_pos, new_pos) == 4:
         mid_pos = (old_pos[0] + (new_pos[0] - old_pos[0]) // 2, old_pos[1] + (new_pos[1] - old_pos[1]) // 2)
+        score = scores[grid[mid_pos]]
         grid[mid_pos] = EMPTY
     # verify if the game is concluded 
-    if (grid[grid == P1].size == 0 and grid[grid == P1K].size == 0) or \
-       (grid[grid == P2].size == 0 and grid[grid == P2K].size == 0):
-        pygame.quit()
-        sys.exit()
+    if grid[grid == P1].size == 0 and grid[grid == P1K].size == 0:
+        done = True 
+        score += LOSE
+    if grid[grid == P2].size == 0 and grid[grid == P2K].size == 0:
+        done = True 
+        score += WIN
+    # return
+    return score, done
 
 
 def user_turn ():
     global USER_TURN, grid, grid_colors, moving_draught, moving_draught_pos
+    reward, done = 0, False
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
@@ -112,7 +126,7 @@ def user_turn ():
                 mouse_x, mouse_y = event.pos
                 cell = (int(mouse_y / CELL_HEIGHT), int(mouse_x / CELL_WIDTH))
                 if draughts.verify_move(grid, grid_colors, moving_draught, cell):
-                    move(old_pos=moving_draught, new_pos=cell)
+                    reward, done = move(old_pos=moving_draught, new_pos=cell)
                     USER_TURN = False 
                 
                 moving_draught = None
@@ -122,20 +136,43 @@ def user_turn ():
             if moving_draught is not None:
                 mouse_x, mouse_y = event.pos
                 moving_draught_pos = (mouse_x, mouse_y)
+    
+    return reward, done
 
 
 def ai_turn ():
     global grid, grid_colors, agent, TRAIN
+    reward, done = 0, False
+    # save current state (old state)
+    old_state = encode(grid.reshape(1, 8, 8))
+    # action 
     action_tensors = agent.move(grid.reshape(1, 8, 8))
-    action = tuple(zip(*action_tensors))[-1]
-    old_pos, new_pos = draughts.translate_ai_move(grid, grid_colors, action, verify=True)
-    move(old_pos, new_pos)
+    action = action_tensors_to_tuples(action_tensors)[-1]
+    old_pos, new_pos = draughts.translate_ai_move(grid, action)
+    # move
+    if not draughts.verify_move(grid, grid_colors, old_pos, new_pos):
+        reward = LOSE
+        # maybe the game should be closed here
+    else:
+        reward, done = move(old_pos, new_pos)
+    # new state 
+    new_state = encode(grid.reshape(1, 8, 8))
+    # training 
+    if TRAIN:
+        agent.train(old_state, (action, ), (reward,), new_state, (done,))
+    # memorize 
+    agent.memory.append((old_state, action, reward, new_state, done))
+    # return reward 
+    return reward, done
+
 
 
 def draw ():
     global USER_TURN, grid, grid_colors, pygame, screen, clock, moving_draught, moving_draught_pos
+    # make kings
     grid[0, :] = np.where(grid[0, :] == P2, P2K, grid[0, :])
     grid[7, :] = np.where(grid[7, :] == P1, P1K, grid[7, :])
+    # draw grid
     screen.fill(BLACK)
     for i, j in itertools.product(range(8), repeat=2):
         if np.array_equal(grid_colors[i, j], WHITE):
@@ -150,12 +187,13 @@ def draw ():
                 if moving_draught is None or (i, j) != moving_draught \
                 else \
                 (moving_draught_pos[0] - CELL_WIDTH / 2, moving_draught_pos[1] - CELL_HEIGHT / 2, CELL_WIDTH, CELL_HEIGHT)
-
+            # draughts drawing
             pygame.draw.ellipse(
                 surface=screen,
                 color=GREY1 if grid[i, j] == P1 or grid[i, j] == P1K else BLUE,
                 rect=rect
             )
+            # crown on kings
             if grid[i, j] in (P1K, P2K):
                 screen.blit(crown_img, (rect[0] + CELL_WIDTH / 4, rect[1] + CELL_HEIGHT / 4))
 

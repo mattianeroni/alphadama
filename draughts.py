@@ -18,7 +18,6 @@ def can_jump (eater, eated):
     # Same team B
     if eater in (P2, P2K) and eated in (P2, P2K):
         return False 
-    
     # deprecated
     # Daught cannot eat king daught
     #if (daught1 == P1 and daught2 == P2K) or (daught1 == P2 and daught2 == P1K):
@@ -28,6 +27,11 @@ def can_jump (eater, eated):
 
 def verify_move(grid, grid_colors, old_pos, new_pos):
     """ Verify if a movement is possible """
+    # movement out of grid 
+    if new_pos[0] < 0 or new_pos[0] >= grid.shape[0] \
+        or new_pos[1] < 0 or new_pos[1] >= grid.shape[1]:
+        return False
+
     # non-empty destination cell or white destination cell
     if grid[new_pos] != EMPTY or np.array_equal(grid_colors[new_pos], WHITE):
         return False 
@@ -52,7 +56,7 @@ def verify_move(grid, grid_colors, old_pos, new_pos):
     return True
 
 
-def translate_ai_move (grid, grid_colors, move, verify=True):
+def translate_ai_move (grid, move):
     """ 
     Translate a result provided by the agent into a detailed movement. 
     The agent only provides the direction in the following way:
@@ -69,8 +73,8 @@ def translate_ai_move (grid, grid_colors, move, verify=True):
     dm = {0: (old_pos[0] + 2, old_pos[1] - 2), 1: (old_pos[0] + 2, old_pos[1] + 2), 
           2: (old_pos[0] - 2, old_pos[1] - 2), 3: (old_pos[0] - 2, old_pos[1] + 2)}
     new_pos = sm[direction] if grid[sm[direction]] == EMPTY else dm[direction]
-    if verify and not verify_move(grid, grid_colors, old_pos, new_pos):
-        raise Exception(f"Unpossible movement from {old_pos} to {new_pos} selected by the model. Arised from move {move}")
+    #if verify and not verify_move(grid, grid_colors, old_pos, new_pos):
+    #    raise Exception(f"Unpossible movement from {old_pos} to {new_pos} selected by the model. Arised from move {move}")
     return old_pos, new_pos
 
 

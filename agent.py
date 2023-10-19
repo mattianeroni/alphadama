@@ -28,35 +28,24 @@ class DamaAgent:
         """ Method to make an AI movement """
         if random.random() < self.randomness:
             random_output = torch.rand((grid.shape[0], 4, 8, 8))
-            return decode(grid, random_output, tuple_form=True)
+            return decode(grid, random_output)
         in_tensor = encode(grid)
         out_tensor = self.model.__call__(in_tensor)
-        return decode(grid, out_tensor, tuple_form=True)
+        return decode(grid, out_tensor)
 
     def train (self, state, action, reward, next_state, done):
         """ Short training step """
         # conversions and type checks
-        if isinstance(state, np.ndarray):
-            state = torch.from_numpy(state)
-        if isinstance(next_state, np.ndarray):
-            next_state = torch.from_numpy(next_state)
         action = torch.tensor(action, dtype=torch.int)
         reward = torch.tensor(reward, dtype=torch.float)
         done = torch.tensor(done, dtype=torch.bool)
-
-        # 1: predicted Q values with current state
+        # estimate next Q-values
         out_tensor = self.model.__call__(state)
         target = out_tensor.clone()
-        target[:, action] = torch.where(done, reward, 
+        target[:, action[:,0], action[:,1], action[:,2]] = torch.where(done, reward, 
                                 reward + self.gamma * torch.max(self.model.__call__(next_state)))
-        #for idx in range(len(done)):
-        #    Q_new = reward[idx]
-        #    if not done[idx]:
-        #        Q_new = reward[idx] + self.gamma * torch.max(self.model(next_state[idx]))
-        #    target[idx][torch.argmax(action[idx]).item()] = Q_new
-        
-        # 2: Q_new = r + y * max(next_predicted Q value) -> only do this if not done
+        # reset gradients and backpropagate the error
         self.optimizer.zero_grad()
-        loss = self.criterion(target, pred)
+        loss = self.criterion(target, out_tensor)
         loss.backward()
         self.optimizer.step()

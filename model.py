@@ -103,7 +103,7 @@ def feasible_moves (grid):
 
 
 @torch.no_grad()
-def decode (grid, output, tuple_form=False):
+def decode (grid, output):
     """ 
     Decode the output of the neural network into a decision.
     :param grid: (B, 8, 8)
@@ -133,7 +133,6 @@ def decode (grid, output, tuple_form=False):
     feas = feasible_moves(grid).type(torch.float)
     feasible_scores = output * feas
     indexes = np.unravel_index(feasible_scores.flatten(-3).argmax(dim=1), (4, 8, 8))
-    #if tuple_form: return tuple(zip(*indexes))
     return indexes
 
 
@@ -141,7 +140,7 @@ def decode (grid, output, tuple_form=False):
 def action_tensors_to_tuples (actions):
     """ Convert the actions in the form retuned by decode, into a set of 
     tuples """
-    return tuple(zip(*indexes))
+    return tuple(zip(*actions))
 
 
 @torch.no_grad()
